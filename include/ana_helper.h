@@ -90,7 +90,8 @@ namespace ana_helper {
  
     // -- one photon gain -----
     std::vector<Int_t> get_bac_info(Int_t run_number);
-
+    std::vector<Int_t> get_kvc2_info(Int_t run_number);
+    Int_t get_kvc2_segment(Int_t run_number);
 }
 
 #endif  // ANA_HELPER_

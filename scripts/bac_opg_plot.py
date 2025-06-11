@@ -43,6 +43,8 @@ for i in range(len(tree["run_num"])):
     else:
         opg_data[f"ch{tree["ch"][i]+1}"][key] = [[tree["result_val"][i][3], tree["result_err"][i][3]]]
 
+pprint.pprint(opg_data["ch1"]["58-1"])
+
 
 # -- calc weighted mean for each condition -----
 opg_mean_data  = np.zeros(4*16*2).reshape(4, 16, 2)
@@ -66,8 +68,6 @@ for ch in range(4):
 if debug_flag: # for debug
     pprint.pprint(opg_mean_data)
     pprint.pprint(for_scale_data)
-
-
 
 for HV in [56, 57, 58]:
     fig = plt.figure(figsize=(10, 6))

@@ -18,7 +18,7 @@ public:
     Double_t kvc2_pos_z = -672.1167;
     Double_t htof_pos_z = -493.363;
     Double_t bh2_pos_z = -554.872;
-    Double_t t0_pos_z  = -1100.0;
+    Double_t t0_pos_z  = -1086.55;
 
     // ADCのbin設定
     const Int_t adc_bin_num = 4096;

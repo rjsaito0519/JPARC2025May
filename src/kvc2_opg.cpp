@@ -182,12 +182,12 @@ Int_t main(int argc, char** argv) {
     // | dev version |
     // +-------------+
     // -- check argments -----
-    if (argc < 3) {
-        std::cerr << "Usage: " << argv[0] << " <run number> <seg number>" << std::endl;
+    if (argc < 2) {
+        std::cerr << "Usage: " << argv[0] << " <run number>" << std::endl;
         return 1;
     }
     Int_t run_num = std::atoi(argv[1]);
-    Int_t ch      = std::atoi(argv[2]);
+    Int_t ch      = ana_helper::get_kvc2_segment(run_num);
 
     TApplication *theApp = new TApplication("App", &argc, argv);
 

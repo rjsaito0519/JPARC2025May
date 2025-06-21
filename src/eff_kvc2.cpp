@@ -61,7 +61,7 @@ Int_t check_inside_box(Double_t x, Double_t y)
     return hit_seg;
 }
 
-void analyze(Int_t run_num){
+std::vector<std::vector<Int_t>> analyze(Int_t run_num){
     // +---------+
     // | setting |
     // +---------+
@@ -83,11 +83,11 @@ void analyze(Int_t run_num){
     // | load file |
     // +-----------+
     // -- hodo -----
-    TString root_file_path_hodo = Form("%s/hodo/hodo_run%05d.root", DATA_DIR.Data(), run_num);
+    TString root_file_path_hodo = Form("%s/hodo/hodo_run%05d_Pi_t0.root", DATA_DIR.Data(), run_num);
     auto *f_hodo = new TFile( root_file_path_hodo.Data() );
     if (!f_hodo || f_hodo->IsZombie()) {
         std::cerr << "Error: Could not open file : " << root_file_path_hodo << std::endl;
-        return;
+        return std::vector<std::vector<Int_t>>{};
     }
     TTreeReader reader_hodo("hodo", f_hodo);
     Int_t total_entry = reader_hodo.GetEntries();
@@ -119,7 +119,7 @@ void analyze(Int_t run_num){
     auto *f_bcout = new TFile( root_file_path_bcout.Data() );
     if (!f_bcout || f_bcout->IsZombie()) {
         std::cerr << "Error: Could not open file : " << root_file_path_bcout << std::endl;
-        return;
+        return std::vector<std::vector<Int_t>>{};
     }
     TTreeReader reader_bcout("bcout", f_bcout);
     TTreeReaderValue<unsigned int> evnum_bcout(reader_bcout, "event_number");
@@ -222,7 +222,7 @@ void analyze(Int_t run_num){
     while (reader_hodo.Next() && reader_bcout.Next()){ displayProgressBar(++evnum, total_entry);
         if (*evnum_hodo != *evnum_bcout) {
             std::cerr << "Error: event numbers are not mutched; hodo : " << *evnum_hodo << ", bcout : " << *evnum_bcout << std::endl;
-            return;
+            return std::vector<std::vector<Int_t>>{};
         }
 
         if (*btof0 > conf.btof_threshold) continue; 
@@ -275,7 +275,7 @@ void analyze(Int_t run_num){
     // メインフレームを作成
     TGMainFrame *main = new TGMainFrame(gClient->GetRoot(), 1000, 800);
     // Handle the window close event to terminate the application
-    main->Connect("CloseWindow()", "TApplication", gApplication, "Terminate()");
+    // main->Connect("CloseWindow()", "TApplication", gApplication, "Terminate()");
     // タブウィジェットを作成
     TGTab *tab = new TGTab(main, 1000, 800);
 
@@ -328,238 +328,164 @@ void analyze(Int_t run_num){
         result_bh2.push_back(tmp_result);
     }
 
+
+    // +--------------------------+
+    // | prepare output root file |
+    // +--------------------------+
+    TString output_path = OUTPUT_DIR + "/root/kvc2_eff.root";
+    if (std::ifstream(output_path.Data())) std::remove(output_path.Data());
+    TFile fout(output_path.Data(), "create");
+    TTree output_tree("tree", ""); 
+
+    // -- prepare root file branch -----
+    std::vector<Int_t> n_kaon(conf.num_of_ch.at("kvc2"), 0);
+    std::vector<Int_t> n_trig(conf.num_of_ch.at("kvc2"), 0);
+    std::vector<Double_t> eff_val, eff_err;
+
+    output_tree.Branch("width", &width, "width/D");
+    output_tree.Branch("height", &height, "height/D");
+    output_tree.Branch("n_kaon", &n_kaon);
+    output_tree.Branch("n_trig", &n_trig);
+    output_tree.Branch("eff_val", &eff_val);
+    output_tree.Branch("eff_err", &eff_err);
     
     // +------------------+
     // | Fill event (2nd) |
     // +------------------+
-    evnum = 0;
-    std::vector<Int_t> n_kaon(conf.num_of_ch.at("kvc2"), 0);
-    std::vector<Int_t> n_trig(conf.num_of_ch.at("kvc2"), 0);
-    Double_t n_sigma = 5.0;
-    reader_hodo.Restart();
-    reader_bcout.Restart();
-    while (reader_hodo.Next() && reader_bcout.Next()){ displayProgressBar(++evnum, total_entry);
-        // -- T0 -----
-        std::vector<Bool_t> t0_hitseg(conf.num_of_ch.at("t0"), false);
-        Bool_t flag_t0 = false;
-        for (Int_t i = 0, n_i = (*t0_raw_seg).size(); i < n_i; i++) {
-            Int_t index = static_cast<Int_t>((*t0_raw_seg)[i]);
-            if (0 <= index && index < conf.num_of_ch.at("t0")) {
-                for (Int_t j = 0, n_j = (*t0_tdc)[index].size(); j < n_j; j++) {
-                    Double_t lower = result_t0[index].par[1] - 5.0*result_t0[index].par[2];
-                    Double_t upper = result_t0[index].par[1] + 5.0*result_t0[index].par[2];
-                    if ( lower < (*t0_tdc)[i][j] && (*t0_tdc)[i][j] < upper ) {
-                        flag_t0 = true;
-                        t0_hitseg[index] = true;
+    for (Double_t w_i = 0.0; w_i < 10.0; w_i++) {
+        for (Double_t h_i = 0.0; h_i < 10.0; h_i++) {
+            std::cout << w_i << ", " << h_i << std::endl;
+            
+            eff_val.clear(); eff_err.clear();
+            width  = 120.0 - 120.0/20.0*w_i;
+            height =  26.0 -  26.0/20.0*h_i;
+            
+            evnum = 0;
+            for (Int_t ch = 0; ch < conf.num_of_ch.at("kvc2"); ch++) {
+                n_kaon[ch] = 0;
+                n_trig[ch] = 0;
+            }
+            Double_t n_sigma = 5.0;
+            reader_hodo.Restart();
+            reader_bcout.Restart();
+            while (reader_hodo.Next() && reader_bcout.Next()){ displayProgressBar(++evnum, total_entry);
+                // -- T0 -----
+                std::vector<Bool_t> t0_hitseg(conf.num_of_ch.at("t0"), false);
+                Bool_t flag_t0 = false;
+                for (Int_t i = 0, n_i = (*t0_raw_seg).size(); i < n_i; i++) {
+                    Int_t index = static_cast<Int_t>((*t0_raw_seg)[i]);
+                    if (0 <= index && index < conf.num_of_ch.at("t0")) {
+                        for (Int_t j = 0, n_j = (*t0_tdc)[index].size(); j < n_j; j++) {
+                            Double_t lower = result_t0[index].par[1] - 5.0*result_t0[index].par[2];
+                            Double_t upper = result_t0[index].par[1] + 5.0*result_t0[index].par[2];
+                            if ( lower < (*t0_tdc)[i][j] && (*t0_tdc)[i][j] < upper ) {
+                                flag_t0 = true;
+                                t0_hitseg[index] = true;
+                            }
+                        }
                     }
                 }
-            }
-        }
 
-        // -- BAC -----
-        Bool_t flag_bac = false;
-        for (Int_t i = 0, n_i = (*bac_tdc).size(); i < n_i; i++) {
-            for (Int_t j = 0, n_j = (*bac_tdc)[i].size(); j < n_j; j++) {
-                Double_t lower = result_bac[0].par[1] - 5.0*result_bac[0].par[2];
-                Double_t upper = result_bac[0].par[1] + 5.0*result_bac[0].par[2];
-                if ( lower < (*bac_tdc)[i][j] && (*bac_tdc)[i][j] < upper ) flag_bac = true;
-            }
-        }
-
-        // -- SAC -----
-        Bool_t flag_sac = false;
-        for (Int_t i = 0, n_i = (*sac_tdc).size(); i < n_i; i++) {
-            for (Int_t j = 0, n_j = (*sac_tdc)[i].size(); j < n_j; j++) {
-                Double_t lower = result_sac[0].par[1] - 5.0*result_sac[0].par[2];
-                Double_t upper = result_sac[0].par[1] + 5.0*result_sac[0].par[2];
-                if ( lower < (*sac_tdc)[i][j] && (*sac_tdc)[i][j] < upper ) flag_sac = true;
-            }
-        }
-
-        // -- KVC -----
-        std::vector<Bool_t> flag_kvc2(conf.num_of_ch.at("kvc2"), false);
-        for (Int_t i = 0, n_i = (*kvc2_raw_seg).size(); i < n_i; i++) {
-            Int_t index = static_cast<Int_t>((*kvc2_raw_seg)[i]);
-            if (0 <= index && index < conf.num_of_ch.at("kvc2")) {
-                for (Int_t j = 0, n_j = (*kvc2_tdc)[i].size(); j < n_j; j++) {
-                    Double_t lower = result_kvc2[index].par[1] - 10.0*result_kvc2[index].par[2];
-                    Double_t upper = result_kvc2[index].par[1] + 10.0*result_kvc2[index].par[2];
-                    if ( lower < (*kvc2_tdc)[i][j] && (*kvc2_tdc)[i][j] < upper ) flag_kvc2[index] = true;
-                }
-            }
-        }
-        
-        // -- BH2 -----
-        std::vector<Bool_t> flag_bh2(conf.num_of_ch.at("bh2"), false);
-        Bool_t flag_bh2_narrow = false;
-        for (Int_t i = 0, n_i = (*bh2_raw_seg).size(); i < n_i; i++) {
-            Int_t index = static_cast<Int_t>((*bh2_raw_seg)[i]);
-            if (0 <= index && index < conf.num_of_ch.at("bh2")) {
-                for (Int_t j = 0, n_j = (*bh2_tdc)[index].size(); j < n_j; j++) {
-                    Double_t lower = result_bh2[index].par[1] - 5.0*result_bh2[index].par[2];
-                    Double_t upper = result_bh2[index].par[1] + 5.0*result_bh2[index].par[2];
-                    if ( lower < (*bh2_tdc)[i][j] && (*bh2_tdc)[i][j] < upper ) {
-                        flag_bh2[index] = true;
-                        if (0 < index && index < 10) flag_bh2_narrow = true;
+                // -- BAC -----
+                Bool_t flag_bac = false;
+                for (Int_t i = 0, n_i = (*bac_tdc).size(); i < n_i; i++) {
+                    for (Int_t j = 0, n_j = (*bac_tdc)[i].size(); j < n_j; j++) {
+                        Double_t lower = result_bac[0].par[1] - 5.0*result_bac[0].par[2];
+                        Double_t upper = result_bac[0].par[1] + 5.0*result_bac[0].par[2];
+                        if ( lower < (*bac_tdc)[i][j] && (*bac_tdc)[i][j] < upper ) flag_bac = true;
                     }
-                } 
-            }   
-        }
-
-        // -- tracking -----
-        std::vector<Bool_t> hitseg(conf.num_of_ch.at("kvc2"), false);
-        for (Int_t i = 0, n = (*x0).size(); i < n; i++) {
-            Double_t x = (*x0)[i] + (*u0)[i]*conf.kvc2_pos_z;
-            Double_t y = (*y0)[i] + (*v0)[i]*conf.kvc2_pos_z;
-            Int_t hit_seg_id = check_inside_box(x, y);
-            if (hit_seg_id != -1) hitseg[hit_seg_id] = true;
-        }
-
-        // -- HTOF -----
-        std::vector<Bool_t> flag_htof(conf.num_of_ch.at("htof"), false);
-        for (Int_t i = 0, n_i = (*htof_raw_seg).size(); i < n_i; i++) {
-            Int_t index = static_cast<Int_t>((*htof_raw_seg)[i]);
-            if (0 <= index && index < conf.num_of_ch.at("htof")) {
-                for (Int_t j = 0, n_j = (*htof_tdc)[i].size(); j < n_j; j++) {
-                    Double_t lower = 690000.0;
-                    Double_t upper = 710000.0;
-                    if ( lower < (*htof_tdc)[i][j] && (*htof_tdc)[i][j] < upper ) flag_htof[index] = true;
                 }
-            }
-        }
-        
-        for (Int_t ch = 0; ch < conf.num_of_ch.at("kvc2"); ch++) {
-            if (flag_kvc2[ch]) {
+
+                // -- SAC -----
+                Bool_t flag_sac = false;
+                for (Int_t i = 0, n_i = (*sac_tdc).size(); i < n_i; i++) {
+                    for (Int_t j = 0, n_j = (*sac_tdc)[i].size(); j < n_j; j++) {
+                        Double_t lower = result_sac[0].par[1] - 5.0*result_sac[0].par[2];
+                        Double_t upper = result_sac[0].par[1] + 5.0*result_sac[0].par[2];
+                        if ( lower < (*sac_tdc)[i][j] && (*sac_tdc)[i][j] < upper ) flag_sac = true;
+                    }
+                }
+
+                // -- KVC -----
+                std::vector<Bool_t> flag_kvc2(conf.num_of_ch.at("kvc2"), false);
+                for (Int_t i = 0, n_i = (*kvc2_raw_seg).size(); i < n_i; i++) {
+                    Int_t index = static_cast<Int_t>((*kvc2_raw_seg)[i]);
+                    if (0 <= index && index < conf.num_of_ch.at("kvc2")) {
+                        for (Int_t j = 0, n_j = (*kvc2_tdc)[i].size(); j < n_j; j++) {
+                            Double_t lower = result_kvc2[index].par[1] - 10.0*result_kvc2[index].par[2];
+                            Double_t upper = result_kvc2[index].par[1] + 10.0*result_kvc2[index].par[2];
+                            if ( lower < (*kvc2_tdc)[i][j] && (*kvc2_tdc)[i][j] < upper ) flag_kvc2[index] = true;
+                        }
+                    }
+                }
+                
+                // -- BH2 -----
+                std::vector<Bool_t> flag_bh2(conf.num_of_ch.at("bh2"), false);
+                Bool_t flag_bh2_narrow = false;
+                for (Int_t i = 0, n_i = (*bh2_raw_seg).size(); i < n_i; i++) {
+                    Int_t index = static_cast<Int_t>((*bh2_raw_seg)[i]);
+                    if (0 <= index && index < conf.num_of_ch.at("bh2")) {
+                        for (Int_t j = 0, n_j = (*bh2_tdc)[index].size(); j < n_j; j++) {
+                            Double_t lower = result_bh2[index].par[1] - 5.0*result_bh2[index].par[2];
+                            Double_t upper = result_bh2[index].par[1] + 5.0*result_bh2[index].par[2];
+                            if ( lower < (*bh2_tdc)[i][j] && (*bh2_tdc)[i][j] < upper ) {
+                                flag_bh2[index] = true;
+                                if (0 < index && index < 10) flag_bh2_narrow = true;
+                            }
+                        } 
+                    }   
+                }
+
+                // -- tracking -----
+                std::vector<Bool_t> hitseg(conf.num_of_ch.at("kvc2"), false);
                 for (Int_t i = 0, n = (*x0).size(); i < n; i++) {
                     Double_t x = (*x0)[i] + (*u0)[i]*conf.kvc2_pos_z;
                     Double_t y = (*y0)[i] + (*v0)[i]*conf.kvc2_pos_z;
-                    h_kvc2_seg_profile[ch].trig->Fill(x, y);
+                    Int_t hit_seg_id = check_inside_box(x, y);
+                    if (hit_seg_id != -1) hitseg[hit_seg_id] = true;
                 }
-            }
-        }
 
-        for (Int_t ch = 0; ch < 6; ch++) {
-            if (flag_htof[ch]) {
-                for (Int_t i = 0, n = (*x0).size(); i < n; i++) {
-                    Double_t x = (*x0)[i] + (*u0)[i]*conf.htof_pos_z;
-                    Double_t y = (*y0)[i] + (*v0)[i]*conf.htof_pos_z;
-                    h_htof_seg_profile[ch].trig->Fill(x, y);
-                    h_htof_seg_profile[6].trig->Fill(x, y);
-                }
-            }
-        }
-
-        for (Int_t ch = 0; ch < conf.num_of_ch.at("bh2"); ch++) {
-            if (flag_bh2[ch]) {
-                for (Int_t i = 0, n = (*x0).size(); i < n; i++) {
-                    Double_t x = (*x0)[i] + (*u0)[i]*conf.bh2_pos_z;
-                    Double_t y = (*y0)[i] + (*v0)[i]*conf.bh2_pos_z;
-                    h_bh2_seg_profile[ch].trig->Fill(x, y);
-                }
-            }
-        }
-
-        for (Int_t ch = 0; ch < conf.num_of_ch.at("t0"); ch++) {
-            if (t0_hitseg[ch]) {
-                for (Int_t i = 0, n = (*x0).size(); i < n; i++) {
-                    Double_t x = (*x0)[i] + (*u0)[i]*conf.t0_pos_z;
-                    Double_t y = (*y0)[i] + (*v0)[i]*conf.t0_pos_z;
-                    h_t0_seg_profile[ch].trig->Fill(x, y);
-                    h_t0_seg_profile[conf.num_of_ch.at("t0")].trig->Fill(x, y);
-                }
-            }
-        }
-
-        if ( flag_t0 && !flag_bac && !flag_sac && flag_bh2_narrow && *btof0 < conf.btof_threshold) {         
-            for (Double_t ch = 0; ch < conf.num_of_ch.at("kvc2"); ch++) {
-                if (hitseg[ch]) {
-                    n_kaon[ch]++;
-                    if (flag_kvc2[ch]) {
-                        n_trig[ch]++;
-                        h_kvc2a[ch].trig->Fill((*kvc2_adc)[ch]);
+                if ( flag_t0 && !flag_bac && !flag_sac && flag_bh2_narrow && *btof0 < conf.btof_threshold) {         
+                    for (Double_t ch = 0; ch < conf.num_of_ch.at("kvc2"); ch++) {
+                        if (hitseg[ch]) {
+                            n_kaon[ch]++;
+                            if (flag_kvc2[ch]) {
+                                n_trig[ch]++;
+                                // h_kvc2a[ch].trig->Fill((*kvc2_adc)[ch]);
+                            }
+                        }
                     }
                 }
             }
-        }
-    }
 
 
-    // -- KVC2 -----
-    TCanvas *c_kvc2_profile = ana_helper::add_tab(tab, "profile");
-    c_kvc2_profile->Divide(2, 2);
-    for (Int_t ch = 0; ch < conf.num_of_ch.at("kvc2"); ++ch) {
-        c_kvc2_profile->cd(ch + 1);
-
-        c_kvc2_profile->DrawFrame(-60.0, -60.0, 90.0, 60.0);
-        h_kvc2_seg_profile[ch].trig->Draw("colz same");
-        c_kvc2_profile->RedrawAxis();
-
-        // 四角形の4頂点（ローカル座標）
-        std::vector<std::pair<Double_t, Double_t>> corners = {
-            {-width / 2, -height / 2},
-            { width / 2, -height / 2},
-            { width / 2,  height / 2},
-            {-width / 2,  height / 2},
-            {-width / 2, -height / 2}  // 閉じるために最初の点を再度
-        };
-
-        for (Int_t i = 0; i < conf.num_of_ch.at("kvc2"); ++i) {
-            // 回転・平行移動
-            Double_t mean_x = 0.0, mean_y = 26.0*(2.0-i) - 13.0;
-            std::vector<Double_t> x_coords, y_coords;
-            for (const auto& [x_local, y_local] : corners) {
-                Double_t x_rot = x_local * std::cos(theta) - y_local * std::sin(theta);
-                Double_t y_rot = x_local * std::sin(theta) + y_local * std::cos(theta);
-                x_coords.push_back(x_rot + mean_x + x_shift);
-                y_coords.push_back(y_rot + mean_y + y_shift);
+            for (Double_t ch = 0; ch < conf.num_of_ch.at("kvc2"); ch++) {
+                Double_t eff = static_cast<Double_t>(n_trig[ch]) / static_cast<Double_t>(n_kaon[ch]);
+                Double_t err = TMath::Sqrt(eff*(1.0 - eff) / static_cast<Double_t>(n_kaon[ch]));
+                std::cout << n_kaon[ch] << ", " << n_trig[ch] << ", " 
+                          << std::fixed << std::setprecision(4) << eff << " +/- " << err << std::endl;
+                eff_val.push_back(eff);
+                eff_err.push_back(err);
             }
-
-            // 描画
-            auto* box = new TPolyLine(x_coords.size(), x_coords.data(), y_coords.data());
-            box->SetLineColor(kRed);
-            box->SetLineWidth(2);
-            box->SetLineStyle(1);  // 実線
-            box->Draw("L SAME");
+            output_tree.Fill();
         }
     }
 
-    TCanvas *c_htof_profile = ana_helper::add_tab(tab, "profile");
-    c_htof_profile->Divide(3, 2);
-    
-    for (Int_t ch = 0; ch < 6; ch++) {
-        c_htof_profile->cd(ch+1);
-        h_htof_seg_profile[ch].trig->Draw("colz");
-    }
+    // +------------+
+    // | Write data |
+    // +------------+
+    fout.cd(); // 明示的にカレントディレクトリを設定
+    output_tree.Write();
+    fout.Close();
 
-    TCanvas *c_bh2_profile = ana_helper::add_tab(tab, "profile");
-    c_bh2_profile->Divide(3, 4);
-    
-    for (Int_t ch = 0; ch < conf.num_of_ch.at("bh2"); ch++) {
-        c_bh2_profile->cd(ch+1);
-        h_bh2_seg_profile[ch].trig->Draw("colz");
-    }
+    // // メインフレームにタブウィジェットを追加
+    // main->AddFrame(tab, new TGLayoutHints(kLHintsExpandX | kLHintsExpandY));
+    // // ウィンドウを表示
+    // main->MapSubwindows();
+    // main->Resize(main->GetDefaultSize());
+    // main->MapWindow();
 
-    TCanvas *c_t0_profile = ana_helper::add_tab(tab, "profile");
-    c_t0_profile->Divide(3, 2);
-    
-    for (Int_t ch = 0; ch < conf.num_of_ch.at("t0")+1; ch++) {
-        c_t0_profile->cd(ch+1);
-        h_t0_seg_profile[ch].trig->Draw("colz");
-    }
-
-    for (Double_t ch = 0; ch < conf.num_of_ch.at("kvc2"); ch++) {
-        Double_t eff = static_cast<Double_t>(n_trig[ch]) / static_cast<Double_t>(n_kaon[ch]);
-        Double_t err = TMath::Sqrt(eff*(1.0 - eff) / static_cast<Double_t>(n_kaon[ch]));
-        std::cout << n_kaon[ch] << ", " << n_trig[ch] << ", " 
-                  << std::fixed << std::setprecision(4) << eff << " +/- " << err << std::endl;
-    }
-    
-    // メインフレームにタブウィジェットを追加
-    main->AddFrame(tab, new TGLayoutHints(kLHintsExpandX | kLHintsExpandY));
-    // ウィンドウを表示
-    main->MapSubwindows();
-    main->Resize(main->GetDefaultSize());
-    main->MapWindow();
+    return std::vector<std::vector<Int_t>>{};
 }
 
 Int_t main(int argc, char** argv) {
@@ -572,7 +498,9 @@ Int_t main(int argc, char** argv) {
     Int_t run_num = std::atoi(argv[1]);
 
     TApplication *theApp = new TApplication("App", &argc, argv);    
+
     analyze(run_num);
+
     theApp->Run();
 
     return 0;

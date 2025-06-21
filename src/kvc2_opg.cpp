@@ -178,106 +178,129 @@ std::vector<std::vector<Double_t>> analyze(Int_t run_num, Int_t ch, Int_t UorD, 
 }
 
 Int_t main(int argc, char** argv) {
-    // +-------------+
-    // | dev version |
-    // +-------------+
-    // -- check argments -----
-    if (argc < 2) {
-        std::cerr << "Usage: " << argv[0] << " <run number>" << std::endl;
-        return 1;
-    }
-    Int_t run_num = std::atoi(argv[1]);
-    Int_t ch      = ana_helper::get_kvc2_segment(run_num);
-
-    TApplication *theApp = new TApplication("App", &argc, argv);
-
-    // -- create window -----
-    TGMainFrame *main = new TGMainFrame(gClient->GetRoot(), 1000, 800);
-    main->Connect("CloseWindow()", "TApplication", gApplication, "Terminate()");
-    TGTab *tab = new TGTab(main, 1000, 800);
-
-    // -- test -----
-    TCanvas *c = ana_helper::add_tab(tab, "kvc2");
-    c->Divide(2, 2);
-    for (Int_t UorD = 0; UorD < conf.num_of_UorD.at("kvc2"); UorD++) analyze(run_num, ch, UorD, c, UorD+1);
-
-    // -- add tab and draw window -----
-    main->AddFrame(tab, new TGLayoutHints(kLHintsExpandX | kLHintsExpandY));
-    main->MapSubwindows();
-    main->Resize(main->GetDefaultSize());
-    main->MapWindow();
-    
-    theApp->Run();
-
-
     // // +-------------+
-    // // | pro version |
+    // // | dev version |
     // // +-------------+
-    // std::vector<Int_t> ana_run_num{ 138, 142, 144, 147, 149, 150, 153, 154, 157, 158, 160, 162, 164, 167, 169, 174, 176, 178, 180, 238, 239, 240 };
-
-    // // +--------------------------+
-    // // | prepare output root file |
-    // // +--------------------------+
-    // TString output_path = OUTPUT_DIR + "/root/kvc2_opg.root";
-    // if (std::ifstream(output_path.Data())) std::remove(output_path.Data());
-    // TFile fout(output_path.Data(), "create");
-    // TTree output_tree("tree", ""); 
-
-    // // -- prepare root file branch -----
-    // std::vector<Double_t> result_val, result_err;
-    // Int_t tmp_run_num, tmp_ch;
-    // Double_t cal_opg_val, cal_opg_err;
-
-    // output_tree.Branch("run_num", &tmp_run_num, "run_num/I");
-    // output_tree.Branch("ch", &tmp_ch, "ch/I");
-    // output_tree.Branch("result_val", &result_val);
-    // output_tree.Branch("result_err", &result_err);
-    // output_tree.Branch("cal_opg_val", &cal_opg_val, "cal_opg_val/D");
-    // output_tree.Branch("cal_opg_err", &cal_opg_err, "cal_opg_err/D");
-
-
-    // // -- prepare pdf -----
-    // Int_t nth_pad = 1;
-    // Int_t rows = 2;
-    // Int_t cols = 2;
-    // Int_t max_pads = rows * cols;
-    // TString pdf_name = OUTPUT_DIR + "/img/kvc2_opg.pdf";
-
-    // auto *c = new TCanvas("", "", 1500, 1200);
-    // c->Divide(cols, rows);
-    // c->Print(pdf_name + "["); // start
-    // for (const auto &run_num : ana_run_num) {
-    //     for (Int_t ch = 0; ch < conf.num_of_ch.at("kvc2"); ch++) {
-    //         if (nth_pad > max_pads) {
-    //             c->Print(pdf_name);
-    //             c->Clear();
-    //             c->Divide(cols, rows);
-    //             nth_pad = 1;
-    //         }
-
-    //         TString key = Form("%05d-%d", run_num, ch);
-    //         if (param::kvc2_opg_fit.count(key.Data())) {
-    //             tmp_run_num = run_num; tmp_ch = ch;
-    //             std::vector<std::vector<Double_t>> result_container = analyze(run_num, ch, c, nth_pad);
-    //             cal_opg_val = result_container[0].back();
-    //             cal_opg_err = result_container[1].back();
-    //             result_val.assign(result_container[0].begin(), result_container[0].end() - 1);
-    //             result_err.assign(result_container[1].begin(), result_container[1].end() - 1);
-    //             output_tree.Fill();
-    //         }
-    //         nth_pad++;
-    //     }
+    // // -- check argments -----
+    // if (argc < 2) {
+    //     std::cerr << "Usage: " << argv[0] << " <run number>" << std::endl;
+    //     return 1;
     // }
-    // c->Print(pdf_name);
-    // c->Print(pdf_name + "]"); // end
-    // delete c;
+    // Int_t run_num = std::atoi(argv[1]);
+    // Int_t ch      = ana_helper::get_kvc2_segment(run_num);
 
-    // // +------------+
-    // // | Write data |
-    // // +------------+
-    // fout.cd(); // 明示的にカレントディレクトリを設定
-    // output_tree.Write();
-    // fout.Close(); 
+    // TApplication *theApp = new TApplication("App", &argc, argv);
 
-    // return 0;
+    // // -- create window -----
+    // TGMainFrame *main = new TGMainFrame(gClient->GetRoot(), 1000, 800);
+    // main->Connect("CloseWindow()", "TApplication", gApplication, "Terminate()");
+    // TGTab *tab = new TGTab(main, 1000, 800);
+
+    // // -- test -----
+    // TCanvas *c = ana_helper::add_tab(tab, "kvc2");
+    // c->Divide(2, 2);
+    // for (Int_t UorD = 0; UorD < conf.num_of_UorD.at("kvc2"); UorD++) analyze(run_num, ch, UorD, c, UorD+1);
+
+    // // -- add tab and draw window -----
+    // main->AddFrame(tab, new TGLayoutHints(kLHintsExpandX | kLHintsExpandY));
+    // main->MapSubwindows();
+    // main->Resize(main->GetDefaultSize());
+    // main->MapWindow();
+    
+    // theApp->Run();
+
+
+    // +-------------+
+    // | pro version |
+    // +-------------+
+    std::vector<Int_t> ana_run_num = {
+        378, 381, 382, 384, 385, 386, 389, 390,
+        507, 508,
+        735, 736, 737, 740, 741, 742, 743, 746,
+        747, 748, 751, 754, 755, 757, 758, 759,
+        762, 768, 769, 772, 773, 774, 778, 779,
+        780, 783, 784, 793, 794, 797, 798, 801,
+        802, 803, 808, 809, 812, 813, 814, 823,
+        825, 826, 829, 830, 831, 832, 835, 836,
+        837, 840, 841, 842
+    };
+
+    // +--------------------------+
+    // | prepare output root file |
+    // +--------------------------+
+    TString output_path = OUTPUT_DIR + "/root/kvc2_opg.root";
+    if (std::ifstream(output_path.Data())) std::remove(output_path.Data());
+    TFile fout(output_path.Data(), "create");
+    TTree output_tree("tree", ""); 
+
+    // -- prepare root file branch -----
+    std::vector<Double_t> result_val, result_err;
+    Int_t tmp_run_num, tmp_ch, hv, board_a, board_b, board_c, board_d;
+    Double_t cal_opg_val, cal_opg_err;
+
+    output_tree.Branch("run_num", &tmp_run_num, "run_num/I");
+    output_tree.Branch("ch", &tmp_ch, "ch/I");
+    output_tree.Branch("hv", &hv, "hv/I");
+    output_tree.Branch("board_a", &board_a, "board_a/I");
+    output_tree.Branch("board_b", &board_b, "board_b/I");
+    output_tree.Branch("board_c", &board_c, "board_c/I");
+    output_tree.Branch("board_d", &board_d, "board_d/I");    
+    output_tree.Branch("result_val", &result_val);
+    output_tree.Branch("result_err", &result_err);
+    output_tree.Branch("cal_opg_val", &cal_opg_val, "cal_opg_val/D");
+    output_tree.Branch("cal_opg_err", &cal_opg_err, "cal_opg_err/D");
+
+
+    // -- prepare pdf -----
+    Int_t nth_pad = 1;
+    Int_t rows = 2;
+    Int_t cols = 2;
+    Int_t max_pads = rows * cols;
+    TString pdf_name = OUTPUT_DIR + "/img/kvc2_opg.pdf";
+
+    auto *c = new TCanvas("", "", 1500, 1200);
+    c->Divide(cols, rows);
+    c->Print(pdf_name + "["); // start
+    for (const auto &run_num : ana_run_num) {
+        Int_t ch = ana_helper::get_kvc2_segment(run_num);
+        for (Int_t UorD = 0; UorD < conf.num_of_UorD.at("kvc2"); UorD++) {
+            if (nth_pad > max_pads) {
+                c->Print(pdf_name);
+                c->Clear();
+                c->Divide(cols, rows);
+                nth_pad = 1;
+            }
+
+            TString key = Form("%05d-%d-%d", run_num, ch, UorD);
+            if (param::kvc2_opg_fit.count(key.Data())) {
+                std::vector<Int_t> kvc2_info = ana_helper::get_kvc2_info(run_num);
+                tmp_run_num = run_num; tmp_ch = ch;
+                hv      = kvc2_info[0];
+                board_a = kvc2_info[1];
+                board_b = kvc2_info[2];
+                board_c = kvc2_info[3];
+                board_d = kvc2_info[4];
+                std::vector<std::vector<Double_t>> result_container = analyze(run_num, ch, UorD, c, nth_pad);
+                cal_opg_val = result_container[0].back();
+                cal_opg_err = result_container[1].back();
+                result_val.assign(result_container[0].begin(), result_container[0].end() - 1);
+                result_err.assign(result_container[1].begin(), result_container[1].end() - 1);
+                output_tree.Fill();
+            }
+            std::cout << "runnum = " << run_num << std::endl;
+            nth_pad++;
+        }
+    }
+    c->Print(pdf_name);
+    c->Print(pdf_name + "]"); // end
+    delete c;
+
+    // +------------+
+    // | Write data |
+    // +------------+
+    fout.cd(); // 明示的にカレントディレクトリを設定
+    output_tree.Write();
+    fout.Close(); 
+
+    return 0;
 }

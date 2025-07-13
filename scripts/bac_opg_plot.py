@@ -87,7 +87,7 @@ for HV in [56, 57, 58]:
         )
 
         mean, error = opg_tool.weighted_mean_and_error(corrected_data[:, 0], 1.0/corrected_data[:, 1]**2)
-        print(i, format(mean, ".3f"), format(error, ".3f"))
+        print(ch, format(mean, ".3f"), format(error, ".3f"))
 
         # 重み付き平均の横線を描画
         ax.hlines(mean, 0.5, 16.5, color=f'C{ch}', linestyle='--', label = f"Amp board {ch+1}\n(mean = {mean:.2f})")

@@ -37,13 +37,12 @@ opg_data = {
     "ch4": dict()    
 }
 for i in range(len(tree["run_num"])):
-    key = f"{tree["hv"][i]}-{tree["board_a"][i]}"
-    if key in opg_data[f"ch{tree["ch"][i]+1}"]:
-        opg_data[f"ch{tree["ch"][i]+1}"][key].append([tree["result_val"][i][3], tree["result_err"][i][3]])
-    else:
-        opg_data[f"ch{tree["ch"][i]+1}"][key] = [[tree["result_val"][i][3], tree["result_err"][i][3]]]
-
-pprint.pprint(opg_data["ch1"]["58-1"])
+    if tree["run_num"][i] < 494:
+        key = f"{tree["hv"][i]}-{tree["board_a"][i]}"
+        if key in opg_data[f"ch{tree["ch"][i]+1}"]:
+            opg_data[f"ch{tree["ch"][i]+1}"][key].append([tree["result_val"][i][3], tree["result_err"][i][3]])
+        else:
+            opg_data[f"ch{tree["ch"][i]+1}"][key] = [[tree["result_val"][i][3], tree["result_err"][i][3]]]
 
 
 # -- calc weighted mean for each condition -----
@@ -56,9 +55,14 @@ for ch in range(4):
         mppc_num = int(key.split("-")[1])-1
         if n > 1:
             opg = np.array(opg_data[f"ch{ch+1}"][key])
+            exist_outlier = opg_tool.check_condition(opg[:, 0])
+            if exist_outlier:
+                print(ch, key)
+                pprint.pprint(opg[:, 0])
+                print("-----")
             mean, error = opg_tool.weighted_mean_and_error(opg[:, 0], 1.0/opg[:, 1]**2)
         else:
-            mean, erorr = opg_data[f"ch{ch+1}"][key]
+            mean, error = opg_data[f"ch{ch+1}"][key][0]
 
         if mppc_hv == 58:
             opg_mean_data[ch][mppc_num] = [mean, error]
@@ -73,7 +77,8 @@ for HV in [56, 57, 58]:
     fig = plt.figure(figsize=(10, 6))
     ax  = fig.add_subplot(111)
     for ch in range(4):
-        scale = for_scale_data[ch][HV-56][0]/opg_mean_data[ch][0][0]
+        # scale = for_scale_data[ch][HV-56][0]/opg_mean_data[ch][0][0]
+        scale = for_scale_data[ch][HV-56][0]/for_scale_data[ch][2][0]
 
         corrected_data = scale * opg_mean_data[ch]
         ax.errorbar(
@@ -92,7 +97,7 @@ for HV in [56, 57, 58]:
             x=[0.5, 16.5],  # x範囲をデータ範囲に拡張
             y1=mean - error,             # エラー範囲下限
             y2=mean + error,             # エラー範囲上限
-            color=f'C{i}',
+            color=f'C{ch}',
             alpha=0.2
         )
         
@@ -104,4 +109,5 @@ for HV in [56, 57, 58]:
     plt.savefig(os.path.join(script_dir, f"../results/img/bac_opg_{HV:.0f}.png"), format='png', bbox_inches='tight', dpi=600, transparent=True)
     plt.savefig(os.path.join(script_dir, f"../results/img/bac_opg_{HV:.0f}.jpg"), format='jpg', bbox_inches='tight', dpi=600, transparent=True)
     plt.show()
+    
     

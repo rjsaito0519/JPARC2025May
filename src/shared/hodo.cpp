@@ -206,6 +206,101 @@ namespace ana_helper {
         return result;
     }
 
+    // // ____________________________________________________________________________________________
+    // FitResult bht_tot_fit(TH1D *h, TCanvas *c, Int_t n_c) {
+    //     Config& conf = Config::getInstance();
+
+    //     c->cd(n_c);
+    //     // gPad->SetLogy(1);
+    //     std::vector<Double_t> par, err;
+
+    //     Double_t peak_pos = h->GetBinCenter(h->GetMaximumBin());
+    //     Double_t stdev    = h->GetStdDev();
+    //     std::pair<Double_t, Double_t> peak_n_sigma(2.0, 2.0);
+
+    //     // -- first fit -----
+    //     TF1 *f_prefit = new TF1("pre_fit_gauss", "gausn", peak_pos-peak_n_sigma.first*stdev, peak_pos+peak_n_sigma.second*stdev);
+    //     f_prefit->SetParameter(1, peak_pos);
+    //     f_prefit->SetParameter(2, stdev*0.8);
+    //     h->Fit(f_prefit, "0QEMR", "", peak_pos-peak_n_sigma.first*stdev, peak_pos+peak_n_sigma.second*stdev);
+    //     for (Int_t i = 0; i < 3; i++) par.push_back(f_prefit->GetParameter(i));
+    //     delete f_prefit;
+
+    //     // -- second fit -----
+    //     TF1 *f_fit_g = new TF1(
+    //         Form("tot_gauss_%s", h->GetName()),
+    //         "[0]*TMath::Gaus(x, [1], [2], true) + [3]*TMath::Gaus(x, [1], [4], true)", 
+    //         par[1]-peak_n_sigma.first*par[2], par[1]+peak_n_sigma.second*par[2]
+    //     );
+    //     f_fit_g->SetParLimits(0, 0., 100000.);
+    //     f_fit_g->SetParameter(1, par[1]);
+    //     f_fit_g->SetParameter(2, par[2]*0.8);
+    //     f_fit_g->SetParLimits(3, 0., 100000.);
+    //     f_fit_g->SetParameter(4, par[2]*1.2);
+    //     f_fit_g->SetLineColor(kOrange);
+    //     f_fit_g->SetLineWidth(2.0);
+    //     h->Fit(f_fit_g, "0QEMR", "", par[1]-peak_n_sigma.first*par[2], par[1]+peak_n_sigma.second*par[2]);
+    //     Double_t chi_square_g = f_fit_g->GetChisquare();
+    //     Double_t p_value_g = TMath::Prob(chi_square_g, f_fit_g->GetNDF());
+
+    //     TF1 *f_fit_l = new TF1(
+    //         Form("tot_landau_%s", h->GetName()), 
+    //         "[0]*TMath::Landau(x, [1], [2], true) + [3]*TMath::Gaus(x, [1], [4], true)", 
+    //         par[1]-peak_n_sigma.first*par[2], par[1]+peak_n_sigma.second*par[2]
+    //     );
+    //     f_fit_l->SetParLimits(0, 0., 100000.);
+    //     f_fit_l->SetParameter(1, par[1]);
+    //     f_fit_l->SetParameter(2, par[2]*0.8);
+    //     f_fit_l->SetParLimits(3, 0., 100000.);
+    //     f_fit_l->SetParameter(4, par[2]*1.2);
+    //     f_fit_l->SetLineColor(kOrange);
+    //     f_fit_l->SetLineWidth(2.0);
+    //     h->Fit(f_fit_l, "0QEMR", "", par[1]-peak_n_sigma.first*par[2], par[1]+peak_n_sigma.second*par[2]);
+    //     Double_t chi_square_l = f_fit_g->GetChisquare();
+    //     Double_t p_value_l = TMath::Prob(chi_square_l, f_fit_l->GetNDF());
+
+    //     // -- draw -----
+    //     FitResult result;
+    //     // if (p_value_g >= p_value_l) {
+    //     if (chi_square_g <= chi_square_l) {
+    //         for (Int_t i = 0, n_par = f_fit_g->GetNpar(); i < n_par; i++) {
+    //             result.par.push_back(f_fit_g->GetParameter(i));
+    //             result.err.push_back(f_fit_g->GetParError(i));
+    //         }
+
+    //         h->GetXaxis()->SetRangeUser(
+    //             result.par[1]- 5.0*result.par[2], 
+    //             result.par[1]+ 5.0*result.par[2]
+    //         );
+    //         h->Draw();
+    //         f_fit_g->SetNpx(1000);
+    //         f_fit_g->Draw("same");
+    //         delete f_fit_l;
+    //     } else {
+    //         for (Int_t i = 0, n_par = f_fit_l->GetNpar(); i < n_par; i++) {
+    //             result.par.push_back(f_fit_l->GetParameter(i));
+    //             result.err.push_back(f_fit_l->GetParError(i));
+    //         }
+
+    //         h->GetXaxis()->SetRangeUser(
+    //             result.par[1]- 8.0*result.par[2], 
+    //             result.par[1]+ 8.0*result.par[2]
+    //         );
+    //         h->Draw();
+    //         f_fit_l->SetNpx(1000);
+    //         f_fit_l->Draw("same");
+    //         delete f_fit_g;
+    //     }
+    //     TLine *line = new TLine(result.par[1], 0, result.par[1], h->GetMaximum());
+    //     line->SetLineStyle(2); // 点線に設定
+    //     line->SetLineColor(kRed); // 色を赤に設定
+    //     line->Draw("same");
+
+    //     c->Update();
+
+    //     return result;
+    // }
+
     // ____________________________________________________________________________________________
     FitResult bht_tot_fit(TH1D *h, TCanvas *c, Int_t n_c) {
         Config& conf = Config::getInstance();
@@ -213,56 +308,76 @@ namespace ana_helper {
         c->cd(n_c);
         // gPad->SetLogy(1);
         std::vector<Double_t> par, err;
+        TString fit_option = h->GetMaximum() > 500.0 ? "0QEMR" : "0QEMRL";
 
         Double_t peak_pos = h->GetBinCenter(h->GetMaximumBin());
         Double_t stdev    = h->GetStdDev();
-        std::pair<Double_t, Double_t> peak_n_sigma(2.0, 2.0);
+        std::pair<Double_t, Double_t> peak_n_sigma(2.0, 1.0);
 
         // -- first fit -----
         TF1 *f_prefit = new TF1("pre_fit_gauss", "gausn", peak_pos-peak_n_sigma.first*stdev, peak_pos+peak_n_sigma.second*stdev);
         f_prefit->SetParameter(1, peak_pos);
-        f_prefit->SetParameter(2, stdev*0.8);
-        h->Fit(f_prefit, "0QEMR", "", peak_pos-peak_n_sigma.first*stdev, peak_pos+peak_n_sigma.second*stdev);
+        f_prefit->SetParameter(2, stdev);
+        h->Fit(f_prefit, fit_option.Data(), "", peak_pos-peak_n_sigma.first*stdev, peak_pos+peak_n_sigma.second*stdev);
         for (Int_t i = 0; i < 3; i++) par.push_back(f_prefit->GetParameter(i));
-        delete f_prefit;
 
         // -- second fit -----
+        // TF1 *f_fit_g = new TF1( Form("tot_gauss_%s", h->GetName()), "gausn", par[1]-peak_n_sigma.first*par[2], par[1]+peak_n_sigma.second*par[2]);
         TF1 *f_fit_g = new TF1(
-            Form("tot_gauss_%s", h->GetName()),
-            "[0]*TMath::Gaus(x, [1], [2], true) + [3]*TMath::Gaus(x, [1], [4], true)", 
-            par[1]-peak_n_sigma.first*par[2], par[1]+peak_n_sigma.second*par[2]
+            Form("tot_gauss_%s", h->GetName()), 
+            [](double *x, double *p) {
+                return p[0] * TMath::Gaus(x[0], p[1], p[2], true) + p[3];
+            },
+            par[1]-peak_n_sigma.first*par[2],
+            par[1]+peak_n_sigma.second*par[2],
+            4
         );
-        f_fit_g->SetParLimits(0, 0., 100000.);
+        f_fit_g->SetParameter(0, par[0]);
         f_fit_g->SetParameter(1, par[1]);
-        f_fit_g->SetParameter(2, par[2]*0.8);
-        f_fit_g->SetParLimits(3, 0., 100000.);
-        f_fit_g->SetParameter(4, par[2]*1.2);
+        f_fit_g->SetParameter(2, par[2]*0.9);
+        f_fit_g->SetParameter(3, 1.0);
+        f_fit_g->SetParLimits(3, 0.0, 100000.0);        
         f_fit_g->SetLineColor(kOrange);
         f_fit_g->SetLineWidth(2.0);
-        h->Fit(f_fit_g, "0QEMR", "", par[1]-peak_n_sigma.first*par[2], par[1]+peak_n_sigma.second*par[2]);
+        h->Fit(f_fit_g, fit_option.Data(), "", par[1]-peak_n_sigma.first*par[2], par[1]+peak_n_sigma.second*par[2]);
         Double_t chi_square_g = f_fit_g->GetChisquare();
         Double_t p_value_g = TMath::Prob(chi_square_g, f_fit_g->GetNDF());
 
+        
+        // -- first fit -----
+        TF1 *f_prefit_l = new TF1("pre_fit_landau", "landaun", peak_pos-peak_n_sigma.first*stdev, peak_pos+peak_n_sigma.second*stdev);
+        f_prefit_l->SetParameter(1, peak_pos);
+        f_prefit_l->SetParameter(2, stdev);
+        h->Fit(f_prefit_l, fit_option.Data(), "", par[1]-peak_n_sigma.first*par[2], par[1]+peak_n_sigma.second*par[2]);
+        for (Int_t i = 0; i < 3; i++) par.push_back(f_prefit_l->GetParameter(i));
+        delete f_prefit_l;
+
+        // -- second fit -----
+        // TF1 *f_fit_l = new TF1( Form("tot_landau_%s", h->GetName()), "landaun", par[1]-peak_n_sigma.first*par[2], par[1]+peak_n_sigma.second*par[2]);
         TF1 *f_fit_l = new TF1(
             Form("tot_landau_%s", h->GetName()), 
-            "[0]*TMath::Landau(x, [1], [2], true) + [3]*TMath::Gaus(x, [1], [4], true)", 
-            par[1]-peak_n_sigma.first*par[2], par[1]+peak_n_sigma.second*par[2]
+            [](double *x, double *p) {
+                return p[0] * TMath::Landau(x[0], p[1], p[2], true) + p[3];
+            },
+            par[1]-peak_n_sigma.first*par[2],
+            par[1]+peak_n_sigma.second*par[2],
+            4
         );
-        f_fit_l->SetParLimits(0, 0., 100000.);
-        f_fit_l->SetParameter(1, par[1]);
-        f_fit_l->SetParameter(2, par[2]*0.8);
-        f_fit_l->SetParLimits(3, 0., 100000.);
-        f_fit_l->SetParameter(4, par[2]*1.2);
+        f_fit_l->SetParameter(0, par[3]);
+        f_fit_l->SetParameter(1, par[4]);
+        f_fit_l->SetParameter(2, par[5]*0.9);
+        f_fit_l->SetParameter(3, 1.0);
+        f_fit_l->SetParLimits(3, 0.0, 100000.0);
         f_fit_l->SetLineColor(kOrange);
         f_fit_l->SetLineWidth(2.0);
-        h->Fit(f_fit_l, "0QEMR", "", par[1]-peak_n_sigma.first*par[2], par[1]+peak_n_sigma.second*par[2]);
+        h->Fit(f_fit_l, fit_option.Data(), "", par[1]-peak_n_sigma.first*par[2], par[1]+peak_n_sigma.second*par[2]);
         Double_t chi_square_l = f_fit_g->GetChisquare();
         Double_t p_value_l = TMath::Prob(chi_square_l, f_fit_l->GetNDF());
 
         // -- draw -----
         FitResult result;
-        // if (p_value_g >= p_value_l) {
-        if (chi_square_g <= chi_square_l) {
+        if (p_value_g >= p_value_l) {
+        // if (chi_square_g <= chi_square_l) {
             for (Int_t i = 0, n_par = f_fit_g->GetNpar(); i < n_par; i++) {
                 result.par.push_back(f_fit_g->GetParameter(i));
                 result.err.push_back(f_fit_g->GetParError(i));
@@ -283,8 +398,8 @@ namespace ana_helper {
             }
 
             h->GetXaxis()->SetRangeUser(
-                result.par[1]- 8.0*result.par[2], 
-                result.par[1]+ 8.0*result.par[2]
+                result.par[1]- 5.0*result.par[2], 
+                result.par[1]+ 10.0*result.par[2]
             );
             h->Draw();
             f_fit_l->SetNpx(1000);
@@ -294,6 +409,66 @@ namespace ana_helper {
         TLine *line = new TLine(result.par[1], 0, result.par[1], h->GetMaximum());
         line->SetLineStyle(2); // 点線に設定
         line->SetLineColor(kRed); // 色を赤に設定
+        line->Draw("same");
+
+        c->Update();
+
+        return result;
+    }
+
+
+   // ____________________________________________________________________________________________
+    FitResult pedestal_fit_with_gauss(TH1D *h, TCanvas *c, Int_t n_c, Double_t n_sigma) {
+        c->cd(n_c);
+        std::vector<Double_t> par, err;
+
+        Double_t peak_pos = h->GetBinCenter(h->GetMaximumBin());;
+        Double_t stdev = h->GetStdDev();
+
+        // -- first fit -----
+        Int_t n_iter = 3;
+        par.insert(par.end(), {0.0, peak_pos, 1.0*stdev});
+        for (Int_t dummy = 0; dummy < n_iter; dummy++) {
+            TF1 *f_prefit = new TF1("pre_fit_gauss", "gausn", par[1]-n_sigma*par[2], par[1]+n_sigma*par[2]);
+            f_prefit->SetParameter(1, par[1]);
+            f_prefit->SetParameter(2, par[2]);
+            h->Fit(f_prefit, "0Q", "", par[1]-n_sigma*par[2], par[1]+n_sigma*par[2]);
+            par.clear();
+            for (Int_t i = 0; i < 3; i++) par.push_back(f_prefit->GetParameter(i));
+            delete f_prefit;            
+        }
+
+        // -- second fit -----
+        TF1 *f_fit = new TF1( Form("gauss_%s", h->GetName()), "gausn", par[1]-n_sigma*par[2], par[1]+n_sigma*par[2]);
+        f_fit->SetParameter(0, par[0]);
+        f_fit->SetParameter(1, par[1]);
+        f_fit->SetParameter(2, par[2]*0.9);
+        f_fit->SetLineColor(kOrange);
+        f_fit->SetLineWidth(2);
+        f_fit->SetNpx(1000);
+        h->Fit(f_fit, "0Q", "", par[1]-n_sigma*par[2], par[1]+n_sigma*par[2]);
+
+        FitResult result;
+        par.clear();
+        Int_t n_par = f_fit->GetNpar();
+        for (Int_t i = 0; i < n_par; i++) {
+            par.push_back(f_fit->GetParameter(i));
+            err.push_back(f_fit->GetParError(i));
+        }
+        Double_t chi2 = f_fit->GetChisquare();
+        Double_t ndf  = f_fit->GetNDF();
+        result.par = par;
+        result.err = err;
+        result.reduced_chi2 = (Double_t) chi2/ndf;
+
+        // -- draw -----
+        h->GetXaxis()->SetRangeUser(result.par[1] - 10.0*result.par[2], result.par[1] + 10.0*result.par[2]);
+        h->Draw();
+        f_fit->Draw("same");
+
+        TLine *line = new TLine(result.par[1], 0, result.par[1], h->GetMaximum());
+        line->SetLineStyle(2);
+        line->SetLineColor(kRed);
         line->Draw("same");
 
         c->Update();

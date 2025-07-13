@@ -216,13 +216,14 @@ Int_t main(int argc, char** argv) {
     std::vector<Int_t> ana_run_num = {
         378, 381, 382, 384, 385, 386, 389, 390,
         507, 508,
+        678,
         735, 736, 737, 740, 741, 742, 743, 746,
         747, 748, 751, 754, 755, 757, 758, 759,
         762, 768, 769, 772, 773, 774, 778, 779,
         780, 783, 784, 793, 794, 797, 798, 801,
         802, 803, 808, 809, 812, 813, 814, 823,
         825, 826, 829, 830, 831, 832, 835, 836,
-        837, 840, 841, 842
+        837, 840, 841
     };
 
     // +--------------------------+
@@ -235,11 +236,12 @@ Int_t main(int argc, char** argv) {
 
     // -- prepare root file branch -----
     std::vector<Double_t> result_val, result_err;
-    Int_t tmp_run_num, tmp_ch, hv, board_a, board_b, board_c, board_d;
+    Int_t tmp_run_num, tmp_seg, tmp_ch, hv, board_a, board_b, board_c, board_d;
     Double_t cal_opg_val, cal_opg_err;
 
     output_tree.Branch("run_num", &tmp_run_num, "run_num/I");
     output_tree.Branch("ch", &tmp_ch, "ch/I");
+    output_tree.Branch("seg", &tmp_seg, "seg/I");
     output_tree.Branch("hv", &hv, "hv/I");
     output_tree.Branch("board_a", &board_a, "board_a/I");
     output_tree.Branch("board_b", &board_b, "board_b/I");
@@ -274,7 +276,7 @@ Int_t main(int argc, char** argv) {
             TString key = Form("%05d-%d-%d", run_num, ch, UorD);
             if (param::kvc2_opg_fit.count(key.Data())) {
                 std::vector<Int_t> kvc2_info = ana_helper::get_kvc2_info(run_num);
-                tmp_run_num = run_num; tmp_ch = ch;
+                tmp_run_num = run_num; tmp_seg = ch;  tmp_ch = UorD; // naming is confusing, be carefull
                 hv      = kvc2_info[0];
                 board_a = kvc2_info[1];
                 board_b = kvc2_info[2];

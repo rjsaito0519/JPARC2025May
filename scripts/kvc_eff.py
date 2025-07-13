@@ -31,7 +31,7 @@ tree = file["tree"].arrays(library="np")
 width_vals = np.arange(120.0, 60.0, -120.0/20.0)   # x軸の中心位置
 height_vals = np.arange(26.0, 13.0, -26.0/20.0)
 
-ch = 3
+ch = 2
 
 efficiency = np.zeros((10, 10))  # shape: (width_index, height_index)
 for w_i in range(10):
@@ -57,7 +57,7 @@ sns.heatmap(df_eff,
 ax.set_xlabel("Width")
 ax.set_ylabel("Height")
 ax.set_title(f"KVC2 Efficiency (Seg. {ch+1})")
-plt.savefig(os.path.join(script_dir, f"../results/img/kvc2_eff{ch}.png"), format='png', bbox_inches='tight', dpi=600, transparent=False)
+plt.savefig(os.path.join(script_dir, f"../results/img/kvc2_eff{ch}.png"), format='png', bbox_inches='tight', dpi=600, transparent=True)
 
 plt.tight_layout()
 plt.show()

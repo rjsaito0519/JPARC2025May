@@ -1,6 +1,21 @@
 import numpy as np
 import matplotlib.pyplot as plt
 
+def check_condition(values, threshold = 0.3):
+    """
+    外れ値がないか確認する
+    外れ値があったらTrueを返す
+    """
+    values = np.array(values)
+    if len(values) < 2:
+        return False
+    
+    mean = np.sum(values)/len(values)
+    for it in values:
+        if np.abs(it - mean) > threshold:
+            return True
+    return False
+
 def weighted_mean_and_error(values, weights):
     """
     重み付き平均とそのエラーを計算する関数。

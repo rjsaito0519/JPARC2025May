@@ -37,6 +37,7 @@ struct FitResult {
     std::vector<Double_t> err;
     Double_t chi_square;
     Int_t ndf;
+    Double_t reduced_chi2;
     Int_t migrad_stats;
     std::vector<Double_t> additional; // 何か追加で値を返したいときのコンテナ
 };
@@ -86,7 +87,7 @@ namespace ana_helper {
     FitResult tdc_fit(TH1D *h, TCanvas *c, Int_t n_c);
     FitResult t0_adc_fit(TH1D *h, TCanvas *c, Int_t n_c, Double_t ped_mip_distance);
     FitResult bht_tot_fit(TH1D *h, TCanvas *c, Int_t n_c);
-
+    FitResult pedestal_fit_with_gauss(TH1D *h, TCanvas *c, Int_t n_c, Double_t n_sigma = 0.7);
  
     // -- one photon gain -----
     std::vector<Int_t> get_bac_info(Int_t run_number);

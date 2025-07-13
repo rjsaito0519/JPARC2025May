@@ -37,6 +37,7 @@ static Double_t width = 110.0, height = 20.0;
 static Double_t theta = 0.0 * TMath::Pi() / 180.0;
 static Double_t x_shift = 20.0, y_shift = 3.0;
 
+
 Int_t check_inside_box(Double_t x, Double_t y)
 {
     Int_t hit_seg = -1;
@@ -102,12 +103,7 @@ void analyze(Int_t run_num){
 
     TTreeReaderValue<std::vector<Double_t>> kvc2_raw_seg(reader_hodo, "kvc2_raw_seg");
     TTreeReaderValue<std::vector<Double_t>> kvc2_hit_seg(reader_hodo, "kvc2_hit_seg");
-    TTreeReaderValue<std::vector<Double_t>> kvc2_adc_a(reader_hodo, "kvc2_adc_a");
-    TTreeReaderValue<std::vector<Double_t>> kvc2_adc_b(reader_hodo, "kvc2_adc_b");
-    TTreeReaderValue<std::vector<Double_t>> kvc2_adc_c(reader_hodo, "kvc2_adc_c");
-    TTreeReaderValue<std::vector<Double_t>> kvc2_adc_d(reader_hodo, "kvc2_adc_d");
     TTreeReaderValue<std::vector<Double_t>> kvc2_adc(reader_hodo, "kvc2_adc_s");
-    
     TTreeReaderValue<std::vector<std::vector<Double_t>>> kvc2_tdc(reader_hodo, "kvc2_tdc_s");
 
     TTreeReaderValue<std::vector<Double_t>> bh2_raw_seg(reader_hodo, "bh2_raw_seg");
@@ -162,36 +158,11 @@ void analyze(Int_t run_num){
     }
 
     // -- KVC2 -----    
-    std::vector<HistPair> h_kvc2a_a;
-    std::vector<HistPair> h_kvc2a_b;
-    std::vector<HistPair> h_kvc2a_c;
-    std::vector<HistPair> h_kvc2a_d;
     std::vector<HistPair> h_kvc2a;
     std::vector<HistPair> h_kvc2t;
-    std::vector<HistPair> h_kvc2npe;
     for (Int_t ch = 0; ch < conf.num_of_ch.at("kvc2"); ch++) {
         {
             TString name  = Form("KVC2a_%d_%d", run_num, ch + 1);
-            TString title = Form("run%05d KVC2a(ADC) ch%d;ADC;", run_num, ch + 1);
-            h_kvc2a_a.emplace_back(name, title, conf.adjust_adc_bin_num, conf.adc_min, conf.adc_max);
-        }
-        {
-            TString name  = Form("KVC2a_a_%d_%d", run_num, ch + 1);
-            TString title = Form("run%05d KVC2b(ADC) ch%d;ADC;", run_num, ch + 1);
-            h_kvc2a_b.emplace_back(name, title, conf.adjust_adc_bin_num, conf.adc_min, conf.adc_max);
-        }
-        {
-            TString name  = Form("KVC2a_b_%d_%d", run_num, ch + 1);
-            TString title = Form("run%05d KVC2c(ADC) ch%d;ADC;", run_num, ch + 1);
-            h_kvc2a_c.emplace_back(name, title, conf.adjust_adc_bin_num, conf.adc_min, conf.adc_max);
-        }
-        {
-            TString name  = Form("KVC2a_c_%d_%d", run_num, ch + 1);
-            TString title = Form("run%05d KVC2d(ADC) ch%d;ADC;", run_num, ch + 1);
-            h_kvc2a_d.emplace_back(name, title, conf.adjust_adc_bin_num, conf.adc_min, conf.adc_max);
-        }
-        {
-            TString name  = Form("KVC2a_d_%d_%d", run_num, ch + 1);
             TString title = Form("run%05d KVC2(ADC) ch%d;ADC;", run_num, ch + 1);
             h_kvc2a.emplace_back(name, title, conf.adjust_adc_bin_num, conf.adc_min, conf.adc_max);
         }
@@ -199,11 +170,6 @@ void analyze(Int_t run_num){
             TString name  = Form("KVC2t_%d_%d", run_num, ch + 1);
             TString title = Form("run%05d KVC2(TDC) ch%d;TDC;", run_num, ch + 1);
             h_kvc2t.emplace_back(name, title, conf.adjust_tdc_bin_num, conf.tdc_min, conf.tdc_max);
-        }
-        {
-            TString name  = Form("KVC2npe_%d_%d", run_num, ch + 1);
-            TString title = Form("run%05d KVC2(NPE) ch%d;NPE;", run_num, ch + 1);
-            h_kvc2npe.emplace_back(name, title, conf.adjust_npe_bin_num, conf.npe_min, conf.npe_max);
         }
     }
 
@@ -287,10 +253,6 @@ void analyze(Int_t run_num){
         for (Int_t i = 0, n_i = (*kvc2_raw_seg).size(); i < n_i; i++) {
             Int_t index = static_cast<Int_t>((*kvc2_raw_seg)[i]);
             if (0 <= index && index < conf.num_of_ch.at("kvc2")) {
-                h_kvc2a_a[index].raw->Fill((*kvc2_adc_a)[index]);
-                h_kvc2a_b[index].raw->Fill((*kvc2_adc_b)[index]);
-                h_kvc2a_c[index].raw->Fill((*kvc2_adc_c)[index]);
-                h_kvc2a_d[index].raw->Fill((*kvc2_adc_d)[index]);
                 for (Int_t j = 0, n_j = (*kvc2_tdc)[index].size(); j < n_j; j++) 
                     h_kvc2t[index].raw->Fill((*kvc2_tdc)[index][j]);
             }
@@ -354,44 +316,6 @@ void analyze(Int_t run_num){
         FitResult tmp_result = ana_helper::tdc_fit(h_kvc2t[ch].raw, c_kvc2, ch+1);
         result_kvc2.push_back(tmp_result);
     }
-
-    // -- KVC2 -----
-    TCanvas *c_kvc2_a = ana_helper::add_tab(tab, "kvc2_a");
-    c_kvc2_a->Divide(2, 2);
-    std::vector<FitResult> result_kvc2_a;
-    conf.detector = "kvc2";
-    for (Int_t ch = 0; ch < conf.num_of_ch.at("kvc2"); ch++) {
-        FitResult tmp_result = ana_helper::bht_tot_fit(h_kvc2a_a[ch].raw, c_kvc2_a, ch+1);
-        result_kvc2_a.push_back(tmp_result);
-    }
-
-    TCanvas *c_kvc2_b = ana_helper::add_tab(tab, "kvc2_b");
-    c_kvc2_b->Divide(2, 2);
-    std::vector<FitResult> result_kvc2_b;
-    conf.detector = "kvc2";
-    for (Int_t ch = 0; ch < conf.num_of_ch.at("kvc2"); ch++) {
-        FitResult tmp_result = ana_helper::bht_tot_fit(h_kvc2a_b[ch].raw, c_kvc2_b, ch+1);
-        result_kvc2_b.push_back(tmp_result);
-    }
-
-    TCanvas *c_kvc2_c = ana_helper::add_tab(tab, "kvc2_c");
-    c_kvc2_c->Divide(2, 2);
-    std::vector<FitResult> result_kvc2_c;
-    conf.detector = "kvc2";
-    for (Int_t ch = 0; ch < conf.num_of_ch.at("kvc2"); ch++) {
-        FitResult tmp_result = ana_helper::bht_tot_fit(h_kvc2a_c[ch].raw, c_kvc2_c, ch+1);
-        result_kvc2_c.push_back(tmp_result);
-    }
-
-    TCanvas *c_kvc2_d = ana_helper::add_tab(tab, "kvc2_d");
-    c_kvc2_d->Divide(2, 2);
-    std::vector<FitResult> result_kvc2_d;
-    conf.detector = "kvc2";
-    for (Int_t ch = 0; ch < conf.num_of_ch.at("kvc2"); ch++) {
-        FitResult tmp_result = ana_helper::bht_tot_fit(h_kvc2a_d[ch].raw, c_kvc2_d, ch+1);
-        result_kvc2_d.push_back(tmp_result);
-    }
-
 
     // -- BH2 -----
     TCanvas *c_bh2 = ana_helper::add_tab(tab, "bh2");
@@ -549,24 +473,10 @@ void analyze(Int_t run_num){
             for (Double_t ch = 0; ch < conf.num_of_ch.at("kvc2"); ch++) {
                 if (hitseg[ch]) {
                     n_kaon[ch]++;
-
-                    Double_t npe = 0.0;
-                    // npe += ( (*kvc2_adc_a)[ch] - conf.kvc2_pedestal[conf.detector_HV][conf.num_of_ch.at("kvc2")*0 + ch]) / conf.kvc2_opg[conf.detector_HV][conf.num_of_ch.at("kvc2")*0 + ch].first;
-                    // npe += ( (*kvc2_adc_b)[ch] - conf.kvc2_pedestal[conf.detector_HV][conf.num_of_ch.at("kvc2")*1 + ch]) / conf.kvc2_opg[conf.detector_HV][conf.num_of_ch.at("kvc2")*1 + ch].first;
-                    // npe += ( (*kvc2_adc_c)[ch] - conf.kvc2_pedestal[conf.detector_HV][conf.num_of_ch.at("kvc2")*2 + ch]) / conf.kvc2_opg[conf.detector_HV][conf.num_of_ch.at("kvc2")*2 + ch].first;
-                    // npe += ( (*kvc2_adc_d)[ch] - conf.kvc2_pedestal[conf.detector_HV][conf.num_of_ch.at("kvc2")*3 + ch]) / conf.kvc2_opg[conf.detector_HV][conf.num_of_ch.at("kvc2")*3 + ch].first;
-                    npe += ( (*kvc2_adc_a)[ch] - result_kvc2_a[ch].par[1]) / conf.kvc2_opg[conf.detector_HV][conf.num_of_ch.at("kvc2")*0 + ch].first;
-                    npe += ( (*kvc2_adc_b)[ch] - result_kvc2_b[ch].par[1]) / conf.kvc2_opg[conf.detector_HV][conf.num_of_ch.at("kvc2")*1 + ch].first;
-                    npe += ( (*kvc2_adc_c)[ch] - result_kvc2_c[ch].par[1]) / conf.kvc2_opg[conf.detector_HV][conf.num_of_ch.at("kvc2")*2 + ch].first;
-                    npe += ( (*kvc2_adc_d)[ch] - result_kvc2_d[ch].par[1]) / conf.kvc2_opg[conf.detector_HV][conf.num_of_ch.at("kvc2")*3 + ch].first;
-
-
                     h_kvc2a[ch].raw->Fill((*kvc2_adc)[ch]);
-                    h_kvc2npe[ch].raw->Fill(npe);
                     if (flag_kvc2[ch]) {
                         n_trig[ch]++;
                         h_kvc2a[ch].trig->Fill((*kvc2_adc)[ch]);
-                        h_kvc2npe[ch].trig->Fill(npe);
                     }
                 }
             }
@@ -582,17 +492,6 @@ void analyze(Int_t run_num){
         h_kvc2a[ch].raw->Draw();
         h_kvc2a[ch].trig->SetLineColor(kRed);
         h_kvc2a[ch].trig->Draw("same");
-    }
-
-    // -- KVC2 -----
-    TCanvas *c_kvc2_npe = ana_helper::add_tab(tab, "kvc2 npe");
-    c_kvc2_npe->Divide(2, 2);
-    for (Int_t ch = 0; ch < conf.num_of_ch.at("kvc2"); ++ch) {
-        c_kvc2_npe->cd(ch + 1);
-        h_kvc2npe[ch].raw->SetLineColor(kBlue);
-        h_kvc2npe[ch].raw->Draw();
-        h_kvc2npe[ch].trig->SetLineColor(kRed);
-        h_kvc2npe[ch].trig->Draw("same");
     }
 
 

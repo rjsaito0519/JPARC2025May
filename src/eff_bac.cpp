@@ -35,7 +35,9 @@ Config& conf = Config::getInstance();
 
 static Double_t width = 110.0, height = 20.0;
 static Double_t theta = 0.0 * TMath::Pi() / 180.0;
-static Double_t x_shift = 20.0, y_shift = 3.0;
+static Double_t x_shift = 23.0, y_shift = 4.0;
+
+static Double_t bac_size = 110.0;
 
 Int_t check_inside_box(Double_t x, Double_t y)
 {
@@ -246,6 +248,16 @@ void analyze(Int_t run_num){
         TString title = Form("run%05d BH2 seg%d;x;y;", run_num, ch + 1);
         h_bh2_seg_profile.emplace_back(name, title, 600, -150.0, 150.0, 280, 70.0, 70.0);
     }
+
+    // -- BAC -----    
+    std::vector<HistPair2D> h_bac_profile;
+    {
+
+        TString name  = Form("BAC_profile_%d", run_num);
+        TString title = Form("run%05d BAC;x;y;", run_num);
+        h_bac_profile.emplace_back(name, title, 600, -150.0, 150.0, 280, 70.0, 70.0);
+    }
+
     
     // +------------------+
     // | Fill event (1st) |
@@ -259,7 +271,7 @@ void analyze(Int_t run_num){
             return;
         }
 
-        if (*btof0 > conf.btof_threshold) continue; 
+        if (*btof0 < conf.btof_threshold) continue; 
     
         // -- T0 -----
         for (Int_t i = 0, n_i = (*t0_raw_seg).size(); i < n_i; i++) {
@@ -453,13 +465,17 @@ void analyze(Int_t run_num){
 
         // -- KVC -----
         std::vector<Bool_t> flag_kvc2(conf.num_of_ch.at("kvc2"), false);
+        Bool_t kvc2_hit_flag = false;
         for (Int_t i = 0, n_i = (*kvc2_raw_seg).size(); i < n_i; i++) {
             Int_t index = static_cast<Int_t>((*kvc2_raw_seg)[i]);
             if (0 <= index && index < conf.num_of_ch.at("kvc2")) {
                 for (Int_t j = 0, n_j = (*kvc2_tdc)[i].size(); j < n_j; j++) {
                     Double_t lower = result_kvc2[index].par[1] - 10.0*result_kvc2[index].par[2];
                     Double_t upper = result_kvc2[index].par[1] + 10.0*result_kvc2[index].par[2];
-                    if ( lower < (*kvc2_tdc)[i][j] && (*kvc2_tdc)[i][j] < upper ) flag_kvc2[index] = true;
+                    if ( lower < (*kvc2_tdc)[i][j] && (*kvc2_tdc)[i][j] < upper ) {
+                        flag_kvc2[index] = true;
+                        kvc2_hit_flag = true;
+                    }
                 }
             }
         }
@@ -482,12 +498,11 @@ void analyze(Int_t run_num){
         }
 
         // -- tracking -----
-        std::vector<Bool_t> hitseg(conf.num_of_ch.at("kvc2"), false);
+        Bool_t bac_track_flag = false;
         for (Int_t i = 0, n = (*x0).size(); i < n; i++) {
-            Double_t x = (*x0)[i] + (*u0)[i]*conf.kvc2_pos_z;
-            Double_t y = (*y0)[i] + (*v0)[i]*conf.kvc2_pos_z;
-            Int_t hit_seg_id = check_inside_box(x, y);
-            if (hit_seg_id != -1) hitseg[hit_seg_id] = true;
+            Double_t x = (*x0)[i] + (*u0)[i]*conf.bac_pos_z - x_shift;
+            Double_t y = (*y0)[i] + (*v0)[i]*conf.bac_pos_z - y_shift;
+            if (std::abs(x) <= bac_size / 2.0 && std::abs(y) <= bac_size / 2.0) bac_track_flag = true;
         }
 
         // -- HTOF -----
@@ -545,30 +560,18 @@ void analyze(Int_t run_num){
             }
         }
 
-        if ( flag_t0 && !flag_bac && !flag_sac && flag_bh2_narrow && *btof0 < conf.btof_threshold) {         
-            for (Double_t ch = 0; ch < conf.num_of_ch.at("kvc2"); ch++) {
-                if (hitseg[ch]) {
-                    n_kaon[ch]++;
+        if (flag_bac) {
+            for (Int_t i = 0, n = (*x0).size(); i < n; i++) {
+                Double_t x = (*x0)[i] + (*u0)[i]*conf.bac_pos_z;
+                Double_t y = (*y0)[i] + (*v0)[i]*conf.bac_pos_z;
+                h_bac_profile[0].trig->Fill(x, y);
+            }
+        }
 
-                    Double_t npe = 0.0;
-                    // npe += ( (*kvc2_adc_a)[ch] - conf.kvc2_pedestal[conf.detector_HV][conf.num_of_ch.at("kvc2")*0 + ch]) / conf.kvc2_opg[conf.detector_HV][conf.num_of_ch.at("kvc2")*0 + ch].first;
-                    // npe += ( (*kvc2_adc_b)[ch] - conf.kvc2_pedestal[conf.detector_HV][conf.num_of_ch.at("kvc2")*1 + ch]) / conf.kvc2_opg[conf.detector_HV][conf.num_of_ch.at("kvc2")*1 + ch].first;
-                    // npe += ( (*kvc2_adc_c)[ch] - conf.kvc2_pedestal[conf.detector_HV][conf.num_of_ch.at("kvc2")*2 + ch]) / conf.kvc2_opg[conf.detector_HV][conf.num_of_ch.at("kvc2")*2 + ch].first;
-                    // npe += ( (*kvc2_adc_d)[ch] - conf.kvc2_pedestal[conf.detector_HV][conf.num_of_ch.at("kvc2")*3 + ch]) / conf.kvc2_opg[conf.detector_HV][conf.num_of_ch.at("kvc2")*3 + ch].first;
-                    npe += ( (*kvc2_adc_a)[ch] - result_kvc2_a[ch].par[1]) / conf.kvc2_opg[conf.detector_HV][conf.num_of_ch.at("kvc2")*0 + ch].first;
-                    npe += ( (*kvc2_adc_b)[ch] - result_kvc2_b[ch].par[1]) / conf.kvc2_opg[conf.detector_HV][conf.num_of_ch.at("kvc2")*1 + ch].first;
-                    npe += ( (*kvc2_adc_c)[ch] - result_kvc2_c[ch].par[1]) / conf.kvc2_opg[conf.detector_HV][conf.num_of_ch.at("kvc2")*2 + ch].first;
-                    npe += ( (*kvc2_adc_d)[ch] - result_kvc2_d[ch].par[1]) / conf.kvc2_opg[conf.detector_HV][conf.num_of_ch.at("kvc2")*3 + ch].first;
-
-
-                    h_kvc2a[ch].raw->Fill((*kvc2_adc)[ch]);
-                    h_kvc2npe[ch].raw->Fill(npe);
-                    if (flag_kvc2[ch]) {
-                        n_trig[ch]++;
-                        h_kvc2a[ch].trig->Fill((*kvc2_adc)[ch]);
-                        h_kvc2npe[ch].trig->Fill(npe);
-                    }
-                }
+        if ( flag_t0 && flag_sac && flag_bh2_narrow && *btof0 > conf.btof_threshold && kvc2_hit_flag && bac_track_flag) {         
+            n_kaon[0]++;
+            if (flag_bac) {
+                n_trig[0]++;
             }
         }
     }
@@ -633,6 +636,37 @@ void analyze(Int_t run_num){
             box->SetLineStyle(1);  // 実線
             box->Draw("L SAME");
         }
+    }
+
+    TCanvas *c_bac_profile = ana_helper::add_tab(tab, "profile");
+    c_bac_profile->cd(1);
+    h_bac_profile[0].trig->Draw("colz");
+    {
+        // 四角形の4頂点（ローカル座標）
+        std::vector<std::pair<Double_t, Double_t>> corners = {
+            {-bac_size / 2, -bac_size / 2},
+            { bac_size / 2, -bac_size / 2},
+            { bac_size / 2,  bac_size / 2},
+            {-bac_size / 2,  bac_size / 2},
+            {-bac_size / 2, -bac_size / 2}  // 閉じるために最初の点を再度
+        };
+
+        Double_t mean_x = 0.0, mean_y = 0;
+        std::vector<Double_t> x_coords, y_coords;
+        for (const auto& [x_local, y_local] : corners) {
+            Double_t x_rot = x_local * std::cos(theta) - y_local * std::sin(theta);
+            Double_t y_rot = x_local * std::sin(theta) + y_local * std::cos(theta);
+            x_coords.push_back(x_rot + mean_x + x_shift);
+            y_coords.push_back(y_rot + mean_y + y_shift);
+        }
+ 
+        // 描画
+        auto* box = new TPolyLine(x_coords.size(), x_coords.data(), y_coords.data());
+        box->SetLineColor(kRed);
+        box->SetLineWidth(2);
+        box->SetLineStyle(1);  // 実線
+        box->Draw("L SAME");
+
     }
 
     TCanvas *c_htof_profile = ana_helper::add_tab(tab, "profile");
